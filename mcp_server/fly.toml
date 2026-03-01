@@ -1,0 +1,16 @@
+app = "your-mcp-server"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = false        # internal-only, no public IP needed
+  auto_stop_machines = true
+  auto_start_machines = true
+
+[env]
+  PORT = "8080"
+  # SUPABASE_DB_URL    = set via fly secrets
+  # BROWSERLESS_API_KEY = set via fly secrets
