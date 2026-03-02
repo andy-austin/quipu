@@ -36,7 +36,8 @@ jobs:
 
       - run: |
           pip install fastapi uvicorn langgraph langchain-mcp-adapters \
-            langchain-google-genai langchain-groq python-jose[cryptography] \
+            langchain-google-genai langchain-groq langchain-openai langchain-anthropic \
+            langchain-mistralai python-jose[cryptography] \
             supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright \
             structlog pyyaml pytest pytest-asyncio
       - run: pyright brain/ hands/
@@ -55,7 +56,8 @@ jobs:
 
       - run: |
           pip install fastapi uvicorn langgraph langchain-mcp-adapters \
-            langchain-google-genai langchain-groq python-jose[cryptography] \
+            langchain-google-genai langchain-groq langchain-openai langchain-anthropic \
+            langchain-mistralai python-jose[cryptography] \
             supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright \
             pytest pytest-asyncio pytest-cov structlog pyyaml
       - run: pytest brain/ hands/ -v --cov=brain --cov=hands --cov-report=term-missing
