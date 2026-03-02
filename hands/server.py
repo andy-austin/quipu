@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 
 from hands.tools.conversation_tools import load_conversation, save_conversation
 from hands.tools.db_tools import check_database_freshness, close_pool, save_metadata
+from hands.tools.file_tools import list_files, parse_document, upload_file
 from hands.tools.key_tools import delete_api_key, list_api_keys, store_api_key
 from hands.tools.notification_tools import send_email, send_slack_message, send_webhook
 from hands.tools.run_tools import get_run, list_runs, save_run
@@ -33,6 +34,9 @@ mcp.tool()(create_webhook)
 mcp.tool()(list_webhooks)
 mcp.tool()(get_webhook)
 mcp.tool()(delete_webhook)
+mcp.tool()(upload_file)
+mcp.tool()(parse_document)
+mcp.tool()(list_files)
 
 
 def _shutdown_pool() -> None:
