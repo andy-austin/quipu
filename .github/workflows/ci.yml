@@ -38,7 +38,7 @@ jobs:
           pip install fastapi uvicorn langgraph langchain-mcp-adapters \
             langchain-google-genai langchain-groq python-jose[cryptography] \
             supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright \
-            structlog pytest pytest-asyncio
+            structlog pyyaml pytest pytest-asyncio
       - run: pyright brain/ hands/
 
   test:
@@ -57,5 +57,5 @@ jobs:
           pip install fastapi uvicorn langgraph langchain-mcp-adapters \
             langchain-google-genai langchain-groq python-jose[cryptography] \
             supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright \
-            pytest pytest-asyncio pytest-cov structlog
+            pytest pytest-asyncio pytest-cov structlog pyyaml
       - run: pytest brain/ hands/ -v --cov=brain --cov=hands --cov-report=term-missing
