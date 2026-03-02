@@ -304,6 +304,36 @@ async def test_stream(params: ScrapeRequest = Depends()):
     )
 
 
+@app.get("/api/runs")
+async def runs_list(
+    limit: int = 20,
+    offset: int = 0,
+    user_id: str = Depends(verify_user),
+):
+    """List past agent runs for the authenticated user with pagination."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("list_runs")
+    if tool is None:
+        return {"runs": [], "total": 0}
+    result = await tool.ainvoke({"user_id": user_id, "limit": limit, "offset": offset})
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
+@app.get("/api/runs/{run_id}")
+async def runs_get(run_id: str, user_id: str = Depends(verify_user)):
+    """Retrieve a specific past agent run with full conversation data."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("get_run")
+    if tool is None:
+        return {}
+    result = await tool.ainvoke({"run_id": run_id, "user_id": user_id})
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
 @app.get("/health")
 async def health():
     return {
