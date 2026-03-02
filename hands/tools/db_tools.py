@@ -28,24 +28,34 @@ async def close_pool() -> None:
         _pool = None
 
 
-async def check_database_freshness(url: str) -> dict:
+async def check_database_freshness(url: str, user_id: str | None = None) -> dict:
     """Check whether scraped data for a URL already exists and is fresh.
 
     Args:
         url: The target URL to look up in the database.
+        user_id: Optional user ID for data isolation.
 
     Returns:
         A dict with keys ``fresh`` (bool) and ``data`` (the cached record or None).
     """
-    log.info("checking_freshness", url=url)
+    log.info("checking_freshness", url=url, user_id=user_id)
     pool = await get_pool()
     async with pool.acquire() as conn:
         cutoff = datetime.now(UTC) - timedelta(hours=FRESHNESS_HOURS)
-        row = await conn.fetchrow(
-            "SELECT * FROM scraped_metadata WHERE url = $1 AND scraped_at > $2",
-            url,
-            cutoff,
-        )
+        if user_id:
+            row = await conn.fetchrow(
+                "SELECT * FROM scraped_metadata"
+                " WHERE url = $1 AND scraped_at > $2 AND user_id = $3",
+                url,
+                cutoff,
+                user_id,
+            )
+        else:
+            row = await conn.fetchrow(
+                "SELECT * FROM scraped_metadata WHERE url = $1 AND scraped_at > $2",
+                url,
+                cutoff,
+            )
         if row:
             log.info("fresh_data_found", url=url)
             return {"fresh": True, "data": dict(row)}
@@ -53,17 +63,18 @@ async def check_database_freshness(url: str) -> dict:
         return {"fresh": False, "data": None}
 
 
-async def save_metadata(url: str, metadata: dict) -> dict:
+async def save_metadata(url: str, metadata: dict, user_id: str | None = None) -> dict:
     """Persist scraped metadata for a URL.
 
     Args:
         url: The source URL.
         metadata: Arbitrary JSON-serialisable metadata to store.
+        user_id: Optional user ID for data isolation.
 
     Returns:
         The saved record id and timestamp.
     """
-    log.info("saving_metadata", url=url)
+    log.info("saving_metadata", url=url, user_id=user_id)
     # Defensive truncation for LLM safety
     if "text" in metadata and isinstance(metadata["text"], str):
         metadata["text"] = metadata["text"][:1000]
@@ -72,14 +83,15 @@ async def save_metadata(url: str, metadata: dict) -> dict:
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO scraped_metadata (url, metadata, scraped_at)
-            VALUES ($1, $2, NOW())
-            ON CONFLICT (url) DO UPDATE
+            INSERT INTO scraped_metadata (url, metadata, scraped_at, user_id)
+            VALUES ($1, $2, NOW(), $3)
+            ON CONFLICT (url, user_id) DO UPDATE
                 SET metadata = EXCLUDED.metadata, scraped_at = NOW()
             RETURNING id, scraped_at
             """,
             url,
             json.dumps(metadata),
+            user_id,
         )
         log.info("metadata_saved", url=url)
         return {"id": str(row["id"]), "scraped_at": row["scraped_at"].isoformat()}
