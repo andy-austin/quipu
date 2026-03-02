@@ -13,10 +13,11 @@ from langgraph.errors import GraphRecursionError
 from brain import graph as graph_module
 from brain.chat_graph import chat_graph
 from brain.dependencies import verify_user
+from brain.extraction_graph import extraction_graph
 from brain.graph import RECURSION_LIMIT, agent_graph
 from brain.logging import log
 from brain.rate_limit import check_rate_limit
-from brain.schemas import ChatRequest, ScrapeRequest
+from brain.schemas import ChatRequest, ExtractionRequest, ScrapeRequest
 
 MCP_MAX_RETRIES = int(os.getenv("MCP_MAX_RETRIES", "5"))
 MCP_RETRY_BASE_DELAY = float(os.getenv("MCP_RETRY_BASE_DELAY", "1.0"))
@@ -230,6 +231,42 @@ async def chat_stream(params: ChatRequest = Depends()):
             system_prompt=params.system_prompt,
             conversation_id=params.conversation_id,
         ),
+        media_type="text/event-stream",
+    )
+
+
+async def stream_extraction(url: str, schema_name: str, model: str | None = None):
+    initial_state = {
+        "url": url,
+        "schema_name": schema_name,
+        "model": model,
+        "user_id": None,
+        "extracted_data": None,
+        "messages": [{"role": "user", "content": f"Extract {schema_name} data from: {url}"}],
+    }
+    config = {"recursion_limit": RECURSION_LIMIT}
+    try:
+        async for output in extraction_graph.astream(initial_state, config=config):
+            for node_name, state_update in output.items():
+                messages = state_update.get("messages", [])
+                for event in _format_sse_events(node_name, messages):
+                    yield _sse_event(event)
+                extracted = state_update.get("extracted_data")
+                if extracted:
+                    yield _sse_event({"type": "extracted", "data": extracted})
+        yield _sse_event({"type": "done"})
+    except GraphRecursionError:
+        msg = "Agent exceeded maximum iterations."
+        yield _sse_event({"type": "error", "message": msg})
+    except Exception as e:
+        yield _sse_event({"type": "error", "message": str(e)})
+
+
+@app.get("/api/extract/stream")
+async def extract_stream(params: ExtractionRequest = Depends()):
+    """Extract structured data from a URL via SSE."""
+    return StreamingResponse(
+        stream_extraction(str(params.url), params.schema_name, params.model),
         media_type="text/event-stream",
     )
 
