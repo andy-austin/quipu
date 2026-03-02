@@ -6,8 +6,8 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-from brain.dependencies import verify_user
 from brain import graph as graph_module
+from brain.dependencies import verify_user
 from brain.graph import agent_graph
 
 
@@ -27,8 +27,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Brain", lifespan=lifespan)
 
 
-async def stream_graph(url: str):
-    initial_state = {"url": url, "messages": [{"role": "user", "content": f"Process URL: {url}"}]}
+async def stream_graph(url: str, model: str | None = None):
+    initial_state = {
+        "url": url,
+        "model": model,
+        "messages": [{"role": "user", "content": f"Process URL: {url}"}],
+    }
     async for output in agent_graph.astream(initial_state):
         for node_name, state_update in output.items():
             messages = state_update.get("messages", [])
@@ -41,9 +45,15 @@ async def stream_graph(url: str):
 
 
 @app.get("/api/scraper/stream")
-async def process_url(url: str, user_id: str = Depends(verify_user)):
+async def process_url(url: str, model: str | None = None, user_id: str = Depends(verify_user)):
     """Authenticated endpoint that streams LangGraph progression via SSE."""
-    return StreamingResponse(stream_graph(url), media_type="text/event-stream")
+    return StreamingResponse(stream_graph(url, model), media_type="text/event-stream")
+
+
+@app.get("/api/test/stream")
+async def test_stream(url: str, model: str | None = None):
+    """Unauthenticated test endpoint — exercises the full Brain→Hands pipeline."""
+    return StreamingResponse(stream_graph(url, model), media_type="text/event-stream")
 
 
 @app.get("/health")

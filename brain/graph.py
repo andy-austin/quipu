@@ -1,8 +1,10 @@
-from typing import Annotated, Optional
-from langchain_google_genai import ChatGoogleGenerativeAI
+from typing import Annotated
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
+
+from brain.models import get_llm
 
 # Populated at startup from the MCP tool server
 remote_mcp_tools: list = []
@@ -10,15 +12,16 @@ remote_mcp_tools: list = []
 
 class AgentState(TypedDict):
     url: str
-    db_status: Optional[str]
-    raw_content: Optional[str]
-    final_json: Optional[str]
+    model: str | None
+    db_status: str | None
+    raw_content: str | None
+    final_json: str | None
     messages: Annotated[list, add_messages]
 
 
 async def scrape_decision_node(state: AgentState) -> AgentState:
     """LLM decides whether to scrape based on tools and current state."""
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+    llm = get_llm(state.get("model"))
     llm_with_tools = llm.bind_tools(remote_mcp_tools)
 
     system_prompt = (
