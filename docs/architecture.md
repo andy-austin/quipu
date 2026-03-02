@@ -11,7 +11,7 @@ By decoupling these services, we can scale the heavy data-processing workers ind
 | Component | Technology | Deployment |
 |---|---|---|
 | Frontend | Next.js | Vercel |
-| Brain | FastAPI + LangGraph + langchain-mcp-adapters | Fly.io |
+| Brain | FastAPI + LangGraph + langchain-mcp-adapters + Gemini | Fly.io |
 | Hands (Tool Server) | FastMCP | Fly.io |
 | Database & Auth | Supabase (PostgreSQL + JWT) | Supabase Cloud |
 | Web Scraping | Browserless.io (Playwright over WebSocket) | External |
@@ -137,7 +137,7 @@ The Brain is designed to manage multiple specialized agents. The current scraper
 
 | Variable | Description |
 |---|---|
-| `OPENAI_API_KEY` | OpenAI API key for GPT-4o |
+| `GOOGLE_API_KEY` | Google AI API key for Gemini |
 | `SUPABASE_JWT_SECRET` | JWT secret for token verification |
 | `MCP_SERVER_URL` | URL to MCP tool server (e.g., `http://your-hands.internal:8080/sse`) |
 

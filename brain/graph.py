@@ -1,5 +1,5 @@
 from typing import Annotated, Optional
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
@@ -18,7 +18,7 @@ class AgentState(TypedDict):
 
 async def scrape_decision_node(state: AgentState) -> AgentState:
     """LLM decides whether to scrape based on tools and current state."""
-    llm = ChatOpenAI(model="gpt-4o")
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
     llm_with_tools = llm.bind_tools(remote_mcp_tools)
 
     system_prompt = (

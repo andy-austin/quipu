@@ -13,25 +13,18 @@ The Brain and Hands communicate over Fly.io's private IPv6 network using SSE. Th
 
 ## Build & Development Commands
 
+Requires [just](https://github.com/casey/just) (`brew install just`).
+
 ```bash
-# Install all workspace dependencies
-uv sync
-
-# Run the Brain (port 8000)
-uvicorn brain.server:app --host 0.0.0.0 --port 8000
-
-# Run the Hands tool server (port 8080)
-python -m hands.server
-
-# Lint
-ruff check .
-ruff format --check .
-
-# Type check
-pyright
-
-# Tests
-pytest                        # all tests
+just sync                     # install dependencies
+just dev                      # run both services (Hands + Brain)
+just brain                    # run Brain only (port 8000)
+just hands                    # run Hands only (port 8080)
+just lint                     # ruff check + format check
+just fix                      # auto-fix lint and format
+just typecheck                # pyright
+just test                     # all tests
+just health                   # curl the health endpoint
 pytest brain/                 # single package
 pytest -k test_name           # single test
 ```
@@ -55,7 +48,7 @@ pytest -k test_name           # single test
 
 ## Environment Variables
 
-Brain: `OPENAI_API_KEY`, `SUPABASE_JWT_SECRET`, `MCP_SERVER_URL`
+Brain: `GOOGLE_API_KEY`, `SUPABASE_JWT_SECRET`, `MCP_SERVER_URL`
 Hands: `SUPABASE_DB_URL`, `BROWSERLESS_API_KEY`
 
 ## Deployment
