@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field, HttpUrl
 
+from brain.extraction_schemas import EXTRACTION_SCHEMAS
 from brain.models import SUPPORTED_MODELS
 
 _model_names = list(SUPPORTED_MODELS.keys())
@@ -37,4 +38,21 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = Field(
         default=None,
         description="Conversation ID for multi-turn persistence",
+    )
+
+
+_schema_names = list(EXTRACTION_SCHEMAS.keys())
+
+
+class ExtractionRequest(BaseModel):
+    """Query parameters for structured extraction endpoints."""
+
+    url: HttpUrl = Field(..., description="URL to extract data from")
+    schema_name: str = Field(
+        default="page",
+        description=f"Extraction schema. Supported: {_schema_names}",
+    )
+    model: str | None = Field(
+        default=None,
+        description=f"LLM model identifier. Supported: {_model_names}",
     )
