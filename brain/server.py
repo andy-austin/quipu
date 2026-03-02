@@ -7,10 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.errors import GraphRecursionError
 
 from brain import graph as graph_module
 from brain.dependencies import verify_user
-from brain.graph import agent_graph
+from brain.graph import RECURSION_LIMIT, agent_graph
 
 
 @asynccontextmanager
@@ -82,13 +83,17 @@ async def stream_graph(url: str, model: str | None = None):
         "model": model,
         "messages": [{"role": "user", "content": f"Process URL: {url}"}],
     }
+    config = {"recursion_limit": RECURSION_LIMIT}
     try:
-        async for output in agent_graph.astream(initial_state):
+        async for output in agent_graph.astream(initial_state, config=config):
             for node_name, state_update in output.items():
                 messages = state_update.get("messages", [])
                 for event in _format_sse_events(node_name, messages):
                     yield _sse_event(event)
         yield _sse_event({"type": "done"})
+    except GraphRecursionError:
+        msg = "Agent exceeded maximum iterations. Task may be too complex."
+        yield _sse_event({"type": "error", "message": msg})
     except Exception as e:
         yield _sse_event({"type": "error", "message": str(e)})
 

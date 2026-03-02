@@ -1,3 +1,4 @@
+import os
 from typing import Annotated
 
 from langgraph.graph import END, START, StateGraph
@@ -8,6 +9,8 @@ from brain.models import get_llm
 
 # Populated at startup from the MCP tool server
 remote_mcp_tools: list = []
+
+RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "25"))
 
 
 class AgentState(TypedDict):
