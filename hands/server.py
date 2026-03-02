@@ -10,6 +10,7 @@ from hands.tools.key_tools import delete_api_key, list_api_keys, store_api_key
 from hands.tools.notification_tools import send_email, send_slack_message, send_webhook
 from hands.tools.run_tools import get_run, list_runs, save_run
 from hands.tools.web_tools import scrape_website
+from hands.tools.webhook_tools import create_webhook, delete_webhook, get_webhook, list_webhooks
 
 port = int(os.getenv("PORT", "8080"))
 mcp = FastMCP("WebScrapingTools", host="0.0.0.0", port=port)
@@ -28,6 +29,10 @@ mcp.tool()(list_api_keys)
 mcp.tool()(send_email)
 mcp.tool()(send_slack_message)
 mcp.tool()(send_webhook)
+mcp.tool()(create_webhook)
+mcp.tool()(list_webhooks)
+mcp.tool()(get_webhook)
+mcp.tool()(delete_webhook)
 
 
 def _shutdown_pool() -> None:
