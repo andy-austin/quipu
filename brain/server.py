@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -15,15 +16,40 @@ from brain.graph import RECURSION_LIMIT, agent_graph
 from brain.logging import log
 from brain.schemas import ScrapeRequest
 
+MCP_MAX_RETRIES = int(os.getenv("MCP_MAX_RETRIES", "5"))
+MCP_RETRY_BASE_DELAY = float(os.getenv("MCP_RETRY_BASE_DELAY", "1.0"))
+
+_mcp_connected = False
+
+
+async def _connect_mcp(mcp_url: str) -> None:
+    """Connect to MCP server with exponential backoff."""
+    global _mcp_connected
+    for attempt in range(1, MCP_MAX_RETRIES + 1):
+        try:
+            client = MultiServerMCPClient({"mcp_tools": {"transport": "sse", "url": mcp_url}})
+            graph_module.remote_mcp_tools = await client.get_tools()
+            _mcp_connected = True
+            log.info(
+                "mcp_connected",
+                attempt=attempt,
+                tools=[t.name for t in graph_module.remote_mcp_tools],
+            )
+            return
+        except Exception as e:
+            delay = MCP_RETRY_BASE_DELAY * (2 ** (attempt - 1))
+            log.warning("mcp_connection_failed", attempt=attempt, max=MCP_MAX_RETRIES, error=str(e))
+            if attempt < MCP_MAX_RETRIES:
+                log.info("mcp_retrying", delay=delay)
+                await asyncio.sleep(delay)
+    _mcp_connected = False
+    log.error("mcp_connection_exhausted")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     mcp_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/sse")
-
-    client = MultiServerMCPClient({"mcp_tools": {"transport": "sse", "url": mcp_url}})
-    graph_module.remote_mcp_tools = await client.get_tools()
-    log.info("mcp_tools_loaded", tools=[t.name for t in graph_module.remote_mcp_tools])
-
+    await _connect_mcp(mcp_url)
     yield
 
 
@@ -118,4 +144,8 @@ async def test_stream(params: ScrapeRequest = Depends()):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "mcp_connected": _mcp_connected,
+        "tools_loaded": len(graph_module.remote_mcp_tools),
+    }
