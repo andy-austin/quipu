@@ -19,6 +19,7 @@ from brain.graph import RECURSION_LIMIT, agent_graph
 from brain.logging import log
 from brain.rate_limit import check_rate_limit
 from brain.schemas import ChatRequest, ExtractionRequest, ScrapeRequest
+from brain.webhooks import router as webhooks_router
 
 MCP_MAX_RETRIES = int(os.getenv("MCP_MAX_RETRIES", "5"))
 MCP_RETRY_BASE_DELAY = float(os.getenv("MCP_RETRY_BASE_DELAY", "1.0"))
@@ -58,6 +59,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Brain", lifespan=lifespan)
+app.include_router(webhooks_router, prefix="/api")
 
 _cors_raw = os.getenv("CORS_ORIGINS", "")
 _cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
