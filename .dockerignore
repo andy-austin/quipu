@@ -1,0 +1,10 @@
+.venv
+.git
+.claude
+.idea
+__pycache__
+*.pyc
+.env
+*.env
+.DS_Store
+docs
