@@ -15,3 +15,22 @@ class ScrapeRequest(BaseModel):
         default=None,
         description=f"LLM model identifier. Supported: {_model_names}",
     )
+
+
+class ChatRequest(BaseModel):
+    """Query parameters for chat endpoints."""
+
+    message: str = Field(..., description="User message to send to the agent")
+    agent: str = Field(default="chat", description="Agent type: 'chat' or 'scrape'")
+    model: str | None = Field(
+        default=None,
+        description=f"LLM model identifier. Supported: {_model_names}",
+    )
+    system_prompt: str | None = Field(
+        default=None,
+        description="Custom system prompt for the agent",
+    )
+    url: HttpUrl | None = Field(
+        default=None,
+        description="URL for scrape agent (required when agent=scrape)",
+    )
