@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "browserless": {
+      "type": "http",
+      "url": "https://browserless-docs.mcp.kapa.ai"
+    }
+  }
+}
