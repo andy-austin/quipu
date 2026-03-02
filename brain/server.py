@@ -6,9 +6,9 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-from agent_api.dependencies import verify_user
-from agent_api import graph as graph_module
-from agent_api.graph import agent_graph
+from brain.dependencies import verify_user
+from brain import graph as graph_module
+from brain.graph import agent_graph
 
 
 @asynccontextmanager
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Agent API", lifespan=lifespan)
+app = FastAPI(title="Brain", lifespan=lifespan)
 
 
 async def stream_graph(url: str):

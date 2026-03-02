@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["agent_api", "mcp_server"]
+members = ["brain", "hands"]
 
 [dependency-groups]
 dev = [

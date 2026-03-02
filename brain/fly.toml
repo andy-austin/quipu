@@ -1,4 +1,4 @@
-app = "your-agent-api"
+app = "your-brain"
 primary_region = "iad"
 
 [build]

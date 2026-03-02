@@ -11,4 +11,4 @@ RUN uv pip install --system -e . && \
 COPY . .
 
 EXPOSE 8080
-CMD ["python", "-m", "mcp_server.server"]
+CMD ["python", "-m", "hands.server"]

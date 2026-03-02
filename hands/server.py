@@ -2,8 +2,8 @@ import os
 
 from mcp.server.fastmcp import FastMCP
 
-from mcp_server.tools.db_tools import check_database_freshness, save_metadata
-from mcp_server.tools.web_tools import scrape_website
+from hands.tools.db_tools import check_database_freshness, save_metadata
+from hands.tools.web_tools import scrape_website
 
 mcp = FastMCP("WebScrapingTools")
 

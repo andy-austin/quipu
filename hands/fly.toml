@@ -1,4 +1,4 @@
-app = "your-mcp-server"
+app = "your-hands"
 primary_region = "iad"
 
 [build]
