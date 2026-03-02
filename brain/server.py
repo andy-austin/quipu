@@ -11,6 +11,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from brain import graph as graph_module
 from brain.dependencies import verify_user
 from brain.graph import agent_graph
+from brain.schemas import ScrapeRequest
 
 
 @asynccontextmanager
@@ -94,15 +95,19 @@ async def stream_graph(url: str, model: str | None = None):
 
 
 @app.get("/api/scraper/stream")
-async def process_url(url: str, model: str | None = None, user_id: str = Depends(verify_user)):
+async def process_url(params: ScrapeRequest = Depends(), user_id: str = Depends(verify_user)):
     """Authenticated endpoint that streams LangGraph progression via SSE."""
-    return StreamingResponse(stream_graph(url, model), media_type="text/event-stream")
+    return StreamingResponse(
+        stream_graph(str(params.url), params.model), media_type="text/event-stream"
+    )
 
 
 @app.get("/api/test/stream")
-async def test_stream(url: str, model: str | None = None):
+async def test_stream(params: ScrapeRequest = Depends()):
     """Unauthenticated test endpoint — exercises the full Brain→Hands pipeline."""
-    return StreamingResponse(stream_graph(url, model), media_type="text/event-stream")
+    return StreamingResponse(
+        stream_graph(str(params.url), params.model), media_type="text/event-stream"
+    )
 
 
 @app.get("/health")
