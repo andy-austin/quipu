@@ -1,15 +1,29 @@
-import os
 import json
+import os
 from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
 DB_URL = os.environ.get("SUPABASE_DB_URL", "")
 FRESHNESS_HOURS = int(os.environ.get("FRESHNESS_HOURS", "24"))
+DB_POOL_MIN = int(os.environ.get("DB_POOL_MIN", "2"))
+DB_POOL_MAX = int(os.environ.get("DB_POOL_MAX", "10"))
+
+_pool: asyncpg.Pool | None = None
 
 
-async def _get_conn() -> asyncpg.Connection:
-    return await asyncpg.connect(DB_URL)
+async def get_pool() -> asyncpg.Pool:
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(DB_URL, min_size=DB_POOL_MIN, max_size=DB_POOL_MAX)
+    return _pool
+
+
+async def close_pool() -> None:
+    global _pool
+    if _pool is not None:
+        await _pool.close()
+        _pool = None
 
 
 async def check_database_freshness(url: str) -> dict:
@@ -22,8 +36,8 @@ async def check_database_freshness(url: str) -> dict:
         A dict with keys ``fresh`` (bool) and ``data`` (the cached record or None).
     """
     print(f"Checking freshness for: {url}")
-    conn = await _get_conn()
-    try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
         cutoff = datetime.now(UTC) - timedelta(hours=FRESHNESS_HOURS)
         row = await conn.fetchrow(
             "SELECT * FROM scraped_metadata WHERE url = $1 AND scraped_at > $2",
@@ -35,8 +49,6 @@ async def check_database_freshness(url: str) -> dict:
             return {"fresh": True, "data": dict(row)}
         print(f"No fresh data found for: {url}")
         return {"fresh": False, "data": None}
-    finally:
-        await conn.close()
 
 
 async def save_metadata(url: str, metadata: dict) -> dict:
@@ -54,8 +66,8 @@ async def save_metadata(url: str, metadata: dict) -> dict:
     if "text" in metadata and isinstance(metadata["text"], str):
         metadata["text"] = metadata["text"][:1000]
 
-    conn = await _get_conn()
-    try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
             INSERT INTO scraped_metadata (url, metadata, scraped_at)
@@ -69,8 +81,3 @@ async def save_metadata(url: str, metadata: dict) -> dict:
         )
         print(f"Successfully saved metadata for: {url}")
         return {"id": str(row["id"]), "scraped_at": row["scraped_at"].isoformat()}
-    except Exception as e:
-        print(f"Error saving metadata for {url}: {e}")
-        raise
-    finally:
-        await conn.close()
