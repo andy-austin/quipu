@@ -1,0 +1,31 @@
+name: Fly Deploy Dry Run
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  dry-run-hands:
+    name: Dry Run – Hands
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - run: flyctl deploy --config hands/fly.toml --dockerfile hands/Dockerfile -a quipu-hands --build-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  dry-run-brain:
+    name: Dry Run – Brain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - run: flyctl deploy --config brain/fly.toml --dockerfile brain/Dockerfile -a quipu-brain --build-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
