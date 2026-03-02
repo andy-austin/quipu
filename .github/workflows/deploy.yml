@@ -1,0 +1,36 @@
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-hands:
+    name: Deploy Hands
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - run: flyctl deploy --config hands/fly.toml --dockerfile hands/Dockerfile -a quipu-hands
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-brain:
+    name: Deploy Brain
+    needs: deploy-hands
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - run: flyctl deploy --config brain/fly.toml --dockerfile brain/Dockerfile -a quipu-brain
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
