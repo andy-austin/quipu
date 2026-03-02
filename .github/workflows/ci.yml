@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install ruff
+
+      - run: ruff check .
+
+      - run: ruff format --check .
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyright
+
+      - run: |
+          pip install fastapi uvicorn langgraph langchain-mcp-adapters \
+            langchain-google-genai langchain-groq python-jose[cryptography] \
+            supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright structlog
+      - run: pyright brain/ hands/
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_JWT_SECRET: test-secret-for-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: |
+          pip install fastapi uvicorn langgraph langchain-mcp-adapters \
+            langchain-google-genai langchain-groq python-jose[cryptography] \
+            supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright \
+            pytest pytest-asyncio structlog
+      - run: pytest brain/ hands/ -v
