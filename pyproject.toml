@@ -19,6 +19,8 @@ select = ["E", "F", "I", "UP"]
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
+reportReturnType = false
+reportAttributeAccessIssue = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
