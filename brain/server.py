@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -7,7 +6,6 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, ToolMessage
-from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.errors import GraphRecursionError
 
 from brain import graph as graph_module
@@ -17,44 +15,16 @@ from brain.dependencies import verify_user
 from brain.extraction_graph import extraction_graph
 from brain.graph import RECURSION_LIMIT, agent_graph
 from brain.logging import log
+from brain.mcp_registry import registry as mcp_registry
 from brain.rate_limit import check_rate_limit
 from brain.schemas import ChatRequest, ExtractionRequest, ScrapeRequest
 from brain.webhooks import router as webhooks_router
 
-MCP_MAX_RETRIES = int(os.getenv("MCP_MAX_RETRIES", "5"))
-MCP_RETRY_BASE_DELAY = float(os.getenv("MCP_RETRY_BASE_DELAY", "1.0"))
-
-_mcp_connected = False
-
-
-async def _connect_mcp(mcp_url: str) -> None:
-    """Connect to MCP server with exponential backoff."""
-    global _mcp_connected
-    for attempt in range(1, MCP_MAX_RETRIES + 1):
-        try:
-            client = MultiServerMCPClient({"mcp_tools": {"transport": "sse", "url": mcp_url}})
-            graph_module.remote_mcp_tools = await client.get_tools()
-            _mcp_connected = True
-            log.info(
-                "mcp_connected",
-                attempt=attempt,
-                tools=[t.name for t in graph_module.remote_mcp_tools],
-            )
-            return
-        except Exception as e:
-            delay = MCP_RETRY_BASE_DELAY * (2 ** (attempt - 1))
-            log.warning("mcp_connection_failed", attempt=attempt, max=MCP_MAX_RETRIES, error=str(e))
-            if attempt < MCP_MAX_RETRIES:
-                log.info("mcp_retrying", delay=delay)
-                await asyncio.sleep(delay)
-    _mcp_connected = False
-    log.error("mcp_connection_exhausted")
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    mcp_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/sse")
-    await _connect_mcp(mcp_url)
+    await mcp_registry.connect_all()
+    graph_module.remote_mcp_tools = mcp_registry.tools
     yield
 
 
@@ -135,7 +105,7 @@ async def stream_graph(url: str, model: str | None = None, user_id: str | None =
 
 def _get_mcp_tool(name: str):
     """Look up an MCP tool by name, or return None."""
-    for t in graph_module.remote_mcp_tools:
+    for t in mcp_registry.tools:
         if t.name == name:
             return t
     return None
@@ -385,6 +355,7 @@ async def keys_list(user_id: str = Depends(verify_user)):
 async def health():
     return {
         "status": "ok",
-        "mcp_connected": _mcp_connected,
-        "tools_loaded": len(graph_module.remote_mcp_tools),
+        "mcp_connected": mcp_registry.connected,
+        "tools_loaded": len(mcp_registry.tools),
+        "servers": mcp_registry.status,
     }
