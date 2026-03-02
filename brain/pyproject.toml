@@ -13,6 +13,7 @@ dependencies = [
     "supabase>=2.10",
     "httpx>=0.28",
     "structlog>=24.1",
+    "pyyaml>=6.0",
 ]
 
 [tool.hatch.build.targets.wheel]

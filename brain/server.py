@@ -11,6 +11,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.errors import GraphRecursionError
 
 from brain import graph as graph_module
+from brain.agents.registry import get_agent, list_agents
 from brain.chat_graph import chat_graph
 from brain.dependencies import verify_user
 from brain.extraction_graph import extraction_graph
@@ -218,17 +219,31 @@ async def stream_chat(
         await _save_history(conversation_id, user_id, collected_messages)
 
 
+@app.get("/api/agents")
+async def agents_list():
+    """List all available agent definitions."""
+    return list_agents()
+
+
 @app.get("/api/chat/stream")
 async def chat_stream(params: ChatRequest = Depends()):
     """Unauthenticated chat endpoint — supports chat and scrape agents via SSE."""
     if params.agent == "scrape":
         url = str(params.url) if params.url else ""
         return StreamingResponse(stream_graph(url, params.model), media_type="text/event-stream")
+
+    # Resolve system prompt: explicit param > agent definition > default
+    system_prompt = params.system_prompt
+    if not system_prompt:
+        agent_def = get_agent(params.agent)
+        if agent_def and agent_def.system_prompt:
+            system_prompt = agent_def.system_prompt
+
     return StreamingResponse(
         stream_chat(
             params.message,
             params.model,
-            system_prompt=params.system_prompt,
+            system_prompt=system_prompt,
             conversation_id=params.conversation_id,
         ),
         media_type="text/event-stream",
