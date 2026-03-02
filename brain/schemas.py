@@ -34,3 +34,7 @@ class ChatRequest(BaseModel):
         default=None,
         description="URL for scrape agent (required when agent=scrape)",
     )
+    conversation_id: str | None = Field(
+        default=None,
+        description="Conversation ID for multi-turn persistence",
+    )

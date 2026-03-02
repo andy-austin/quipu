@@ -129,31 +129,92 @@ async def stream_graph(url: str, model: str | None = None, user_id: str | None =
         yield _sse_event({"type": "error", "message": str(e)})
 
 
+def _get_mcp_tool(name: str):
+    """Look up an MCP tool by name, or return None."""
+    for t in graph_module.remote_mcp_tools:
+        if t.name == name:
+            return t
+    return None
+
+
+async def _load_history(conversation_id: str, user_id: str) -> list[dict]:
+    """Load conversation history via the MCP load_conversation tool."""
+    tool = _get_mcp_tool("load_conversation")
+    if tool is None:
+        log.warning("load_conversation_tool_not_found")
+        return []
+    try:
+        result = await tool.ainvoke({"conversation_id": conversation_id, "user_id": user_id})
+        if isinstance(result, str):
+            result = json.loads(result)
+        return result.get("messages", [])
+    except Exception as e:
+        log.error("load_conversation_failed", error=str(e))
+        return []
+
+
+async def _save_history(conversation_id: str, user_id: str, messages: list[dict]) -> None:
+    """Save conversation history via the MCP save_conversation tool."""
+    tool = _get_mcp_tool("save_conversation")
+    if tool is None:
+        log.warning("save_conversation_tool_not_found")
+        return
+    try:
+        await tool.ainvoke(
+            {
+                "conversation_id": conversation_id,
+                "user_id": user_id,
+                "messages": messages,
+            }
+        )
+    except Exception as e:
+        log.error("save_conversation_failed", error=str(e))
+
+
 async def stream_chat(
     message: str,
     model: str | None = None,
     user_id: str | None = None,
     system_prompt: str | None = None,
+    conversation_id: str | None = None,
 ):
+    # Load history if conversation_id provided
+    history: list[dict] = []
+    if conversation_id and user_id:
+        history = await _load_history(conversation_id, user_id)
+
+    all_messages = history + [{"role": "user", "content": message}]
     initial_state = {
         "model": model,
         "user_id": user_id,
         "system_prompt": system_prompt,
-        "messages": [{"role": "user", "content": message}],
+        "conversation_id": conversation_id,
+        "messages": all_messages,
     }
     config = {"recursion_limit": RECURSION_LIMIT}
+    collected_messages = list(all_messages)
     try:
         async for output in chat_graph.astream(initial_state, config=config):
             for node_name, state_update in output.items():
                 messages = state_update.get("messages", [])
+                for msg in messages:
+                    if isinstance(msg, AIMessage) and msg.content:
+                        collected_messages.append({"role": "assistant", "content": msg.content})
                 for event in _format_sse_events(node_name, messages):
                     yield _sse_event(event)
-        yield _sse_event({"type": "done"})
+        done_event = {"type": "done"}
+        if conversation_id:
+            done_event["conversation_id"] = conversation_id
+        yield _sse_event(done_event)
     except GraphRecursionError:
         msg = "Agent exceeded maximum iterations. Task may be too complex."
         yield _sse_event({"type": "error", "message": msg})
     except Exception as e:
         yield _sse_event({"type": "error", "message": str(e)})
+
+    # Save conversation after streaming
+    if conversation_id and user_id:
+        await _save_history(conversation_id, user_id, collected_messages)
 
 
 @app.get("/api/chat/stream")
@@ -163,7 +224,12 @@ async def chat_stream(params: ChatRequest = Depends()):
         url = str(params.url) if params.url else ""
         return StreamingResponse(stream_graph(url, params.model), media_type="text/event-stream")
     return StreamingResponse(
-        stream_chat(params.message, params.model, system_prompt=params.system_prompt),
+        stream_chat(
+            params.message,
+            params.model,
+            system_prompt=params.system_prompt,
+            conversation_id=params.conversation_id,
+        ),
         media_type="text/event-stream",
     )
 

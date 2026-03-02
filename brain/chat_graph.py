@@ -24,6 +24,7 @@ class ChatState(TypedDict):
     model: str | None
     user_id: str | None
     system_prompt: str | None
+    conversation_id: str | None
 
 
 async def chat_node(state: ChatState) -> ChatState:
