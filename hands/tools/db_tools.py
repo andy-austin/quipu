@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import UTC, datetime, timedelta
 
 import asyncpg
@@ -20,6 +21,7 @@ async def check_database_freshness(url: str) -> dict:
     Returns:
         A dict with keys ``fresh`` (bool) and ``data`` (the cached record or None).
     """
+    print(f"Checking freshness for: {url}")
     conn = await _get_conn()
     try:
         cutoff = datetime.now(UTC) - timedelta(hours=FRESHNESS_HOURS)
@@ -29,7 +31,9 @@ async def check_database_freshness(url: str) -> dict:
             cutoff,
         )
         if row:
+            print(f"Found fresh data for: {url}")
             return {"fresh": True, "data": dict(row)}
+        print(f"No fresh data found for: {url}")
         return {"fresh": False, "data": None}
     finally:
         await conn.close()
@@ -45,6 +49,11 @@ async def save_metadata(url: str, metadata: dict) -> dict:
     Returns:
         The saved record id and timestamp.
     """
+    print(f"Saving metadata for: {url}")
+    # Defensive truncation for LLM safety
+    if "text" in metadata and isinstance(metadata["text"], str):
+        metadata["text"] = metadata["text"][:1000]
+
     conn = await _get_conn()
     try:
         row = await conn.fetchrow(
@@ -56,8 +65,12 @@ async def save_metadata(url: str, metadata: dict) -> dict:
             RETURNING id, scraped_at
             """,
             url,
-            metadata,
+            json.dumps(metadata),
         )
+        print(f"Successfully saved metadata for: {url}")
         return {"id": str(row["id"]), "scraped_at": row["scraped_at"].isoformat()}
+    except Exception as e:
+        print(f"Error saving metadata for {url}: {e}")
+        raise
     finally:
         await conn.close()

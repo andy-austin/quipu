@@ -21,17 +21,26 @@ class AgentState(TypedDict):
 
 async def scrape_decision_node(state: AgentState) -> AgentState:
     """LLM decides whether to scrape based on tools and current state."""
+    print(f"Entering reasoning node for: {state.get('url')}")
     llm = get_llm(state.get("model"))
     llm_with_tools = llm.bind_tools(remote_mcp_tools)
 
     system_prompt = (
-        "You are a web scraping agent. Given a URL, first check if fresh data "
-        "already exists in the database. If it does, return the cached result. "
-        "Otherwise, scrape the website and save the metadata."
+        "You are a web scraping agent. Follow these steps exactly:\n"
+        "1. Call 'check_database_freshness' for the given URL.\n"
+        "2. If fresh data exists, return it and stop.\n"
+        "3. If no fresh data exists, call 'scrape_website'.\n"
+        "4. Once you have the scraped data, call 'save_metadata' to persist it.\n"
+        "5. Finally, return the scraped results.\n"
+        "Do NOT call 'scrape_website' and 'save_metadata' in the same turn."
     )
     response = await llm_with_tools.ainvoke(
         [{"role": "system", "content": system_prompt}, *state["messages"]]
     )
+    if hasattr(response, "tool_calls") and response.tool_calls:
+        print(f"LLM decided to call tools: {[tc['name'] for tc in response.tool_calls]}")
+    else:
+        print("LLM finished reasoning without tool calls.")
     return {"messages": [response]}
 
 
@@ -42,17 +51,27 @@ async def tool_execution_node(state: AgentState) -> AgentState:
     last_message = state["messages"][-1]
     tool_map = {t.name: t for t in remote_mcp_tools}
 
-    results = []
+    new_messages = []
     for tool_call in last_message.tool_calls:
-        tool = tool_map.get(tool_call["name"])
+        tool_name = tool_call["name"]
+        print(f"Executing tool: {tool_name} with args: {tool_call['args']}")
+        tool = tool_map.get(tool_name)
         if tool is None:
-            result = f"Tool '{tool_call['name']}' not found."
+            result = f"Tool '{tool_name}' not found."
+            print(result)
         else:
-            result = await tool.ainvoke(tool_call["args"])
-        results.append(
+            try:
+                # Sequential execution to avoid MCP session/browser closure issues
+                result = await tool.ainvoke(tool_call["args"])
+                print(f"Tool {tool_name} returned successfully.")
+            except Exception as e:
+                result = f"Error executing tool {tool_name}: {e}"
+                print(result)
+        
+        new_messages.append(
             ToolMessage(content=str(result), tool_call_id=tool_call["id"])
         )
-    return {"messages": results}
+    return {"messages": new_messages}
 
 
 def should_continue(state: AgentState) -> str:

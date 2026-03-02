@@ -17,6 +17,7 @@ async def scrape_website(url: str) -> dict:
     Returns:
         A dict with ``title``, ``text``, and ``links`` extracted from the page.
     """
+    print(f"Scraping website: {url}")
     ws_endpoint = f"{BROWSERLESS_URL}?token={BROWSERLESS_API_KEY}"
 
     async with async_playwright() as p:
@@ -29,6 +30,10 @@ async def scrape_website(url: str) -> dict:
             links = await page.eval_on_selector_all(
                 "a[href]", "els => els.map(e => e.href)"
             )
-            return {"title": title, "text": text[:5000], "links": links[:50]}
+            print(f"Successfully scraped: {url}")
+            return {"title": title, "text": text[:1000], "links": links[:20]}
+        except Exception as e:
+            print(f"Error scraping {url}: {e}")
+            raise
         finally:
             await browser.close()
