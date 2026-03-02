@@ -11,7 +11,7 @@ By decoupling these services, we can scale the heavy data-processing workers ind
 | Component | Technology | Deployment |
 |---|---|---|
 | Frontend | Next.js | Vercel |
-| Brain | FastAPI + LangGraph + langchain-mcp-adapters + Gemini | Fly.io |
+| Brain | FastAPI + LangGraph + langchain-mcp-adapters + Gemini / Groq | Fly.io |
 | Hands (Tool Server) | FastMCP | Fly.io |
 | Database & Auth | Supabase (PostgreSQL + JWT) | Supabase Cloud |
 | Web Scraping | Browserless.io (Playwright over WebSocket) | External |
@@ -96,8 +96,13 @@ quipu/
 │   ├── pyproject.toml       # Package dependencies
 │   ├── Dockerfile
 │   └── fly.toml             # Fly.io deployment config
+├── migrations/              # SQL migration files
+│   └── 001_scraped_metadata.sql
 ├── docs/                    # Project documentation
-│   └── architecture.md      # This file
+│   ├── architecture.md      # This file
+│   ├── multi-model.md       # Multi-model support
+│   ├── sse-protocol.md      # SSE event format
+│   └── migrations.md        # Migration process
 ├── pyproject.toml           # Root workspace config (uv)
 └── .gitignore
 ```
@@ -125,8 +130,9 @@ The Brain is designed to manage multiple specialized agents. The current scraper
 
 ### Key Components
 
-- **`server.py`** - FastAPI app with lifespan-managed MCP client connection, SSE streaming endpoint
+- **`server.py`** - FastAPI app with lifespan-managed MCP client connection, structured SSE streaming endpoint
 - **`graph.py`** - LangGraph state machine with reasoning and tool execution nodes
+- **`models.py`** - Multi-model support (Gemini, Groq) with provider abstraction
 - **`dependencies.py`** - Supabase JWT verification middleware
 
 **Entry point:** `brain/server.py`
@@ -138,6 +144,7 @@ The Brain is designed to manage multiple specialized agents. The current scraper
 | Variable | Description |
 |---|---|
 | `GOOGLE_API_KEY` | Google AI API key for Gemini |
+| `GROQ_API_KEY` | Groq API key for Llama models |
 | `SUPABASE_JWT_SECRET` | JWT secret for token verification |
 | `MCP_SERVER_URL` | URL to MCP tool server (e.g., `http://your-hands.internal:8080/sse`) |
 

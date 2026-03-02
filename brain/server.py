@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import AIMessage, ToolMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from brain import graph as graph_module
@@ -15,9 +16,7 @@ from brain.graph import agent_graph
 async def lifespan(app: FastAPI):
     mcp_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/sse")
 
-    client = MultiServerMCPClient(
-        {"mcp_tools": {"transport": "sse", "url": mcp_url}}
-    )
+    client = MultiServerMCPClient({"mcp_tools": {"transport": "sse", "url": mcp_url}})
     graph_module.remote_mcp_tools = await client.get_tools()
     print(f"Loaded remote tools: {[t.name for t in graph_module.remote_mcp_tools]}")
 
@@ -27,21 +26,60 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Brain", lifespan=lifespan)
 
 
+def _sse_event(event: dict) -> str:
+    return f"data: {json.dumps(event)}\n\n"
+
+
+def _format_sse_events(node_name: str, messages: list) -> list[dict]:
+    """Map LangGraph node outputs to structured SSE events."""
+    events = []
+    for msg in messages:
+        if isinstance(msg, AIMessage):
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                for tc in msg.tool_calls:
+                    events.append(
+                        {
+                            "type": "tool_start",
+                            "message": f"Calling {tc['name']}...",
+                            "tool": tc["name"],
+                        }
+                    )
+            elif msg.content:
+                events.append(
+                    {
+                        "type": "reasoning" if node_name == "reasoning" else "answer",
+                        "message": msg.content,
+                    }
+                )
+        elif isinstance(msg, ToolMessage):
+            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            is_error = content.startswith("Error")
+            events.append(
+                {
+                    "type": "tool_result",
+                    "message": content[:200],
+                    "tool": msg.name or "",
+                    "status": "error" if is_error else "success",
+                }
+            )
+    return events
+
+
 async def stream_graph(url: str, model: str | None = None):
     initial_state = {
         "url": url,
         "model": model,
         "messages": [{"role": "user", "content": f"Process URL: {url}"}],
     }
-    async for output in agent_graph.astream(initial_state):
-        for node_name, state_update in output.items():
-            messages = state_update.get("messages", [])
-            log_entries = [
-                m.content if hasattr(m, "content") else str(m) for m in messages
-            ]
-            payload = {"step": node_name, "logs": log_entries}
-            yield f"data: {json.dumps(payload)}\n\n"
-    yield f"data: {json.dumps({'step': 'END'})}\n\n"
+    try:
+        async for output in agent_graph.astream(initial_state):
+            for node_name, state_update in output.items():
+                messages = state_update.get("messages", [])
+                for event in _format_sse_events(node_name, messages):
+                    yield _sse_event(event)
+        yield _sse_event({"type": "done"})
+    except Exception as e:
+        yield _sse_event({"type": "error", "message": str(e)})
 
 
 @app.get("/api/scraper/stream")

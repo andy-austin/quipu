@@ -42,6 +42,10 @@ deploy-brain:
 deploy-hands:
     fly deploy -c hands/fly.toml --dockerfile hands/Dockerfile
 
+# Run SQL migrations against Supabase (executes all .sql files in order)
+migrate:
+    for f in migrations/*.sql; do echo "Running $f..." && psql "$SUPABASE_DB_URL" -f "$f"; done
+
 # Install dependencies
 sync:
     uv sync
