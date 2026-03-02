@@ -37,7 +37,8 @@ jobs:
       - run: |
           pip install fastapi uvicorn langgraph langchain-mcp-adapters \
             langchain-google-genai langchain-groq python-jose[cryptography] \
-            supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright structlog
+            supabase httpx pydantic fastmcp asyncpg beautifulsoup4 playwright \
+            structlog pytest pytest-asyncio
       - run: pyright brain/ hands/
 
   test:
