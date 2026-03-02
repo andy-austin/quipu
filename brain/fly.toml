@@ -1,4 +1,4 @@
-app = "your-brain"
+app = "quipu-brain"
 primary_region = "iad"
 
 [build]
@@ -17,8 +17,12 @@ primary_region = "iad"
     path = "/health"
     timeout = "2s"
 
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
 [env]
   PORT = "8000"
-  # MCP_SERVER_URL = "http://your-mcp-server.internal:8080/sse"
-  # OPENAI_API_KEY = set via fly secrets
+  # MCP_SERVER_URL      = set via fly secrets
+  # GOOGLE_API_KEY      = set via fly secrets
   # SUPABASE_JWT_SECRET = set via fly secrets

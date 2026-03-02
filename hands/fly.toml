@@ -1,4 +1,4 @@
-app = "your-hands"
+app = "quipu-hands"
 primary_region = "iad"
 
 [build]
@@ -9,6 +9,10 @@ primary_region = "iad"
   force_https = false        # internal-only, no public IP needed
   auto_stop_machines = true
   auto_start_machines = true
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
 
 [env]
   PORT = "8080"

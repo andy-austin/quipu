@@ -145,15 +145,17 @@ The Brain is designed to manage multiple specialized agents. The current scraper
 
 ### Tool Server (The Hands)
 
-- **App Name:** `your-hands`
+- **App Name:** `quipu-hands`
 - **Port:** 8080
 - **Public IP:** Not required (internal only)
+- **VM:** `shared-cpu-1x`, 256 MB RAM
 
 ### Brain
 
-- **App Name:** `your-brain`
+- **App Name:** `quipu-brain`
 - **Port:** 8000 (publicly exposed over HTTPS)
-- **Key env var:** `MCP_SERVER_URL="http://your-hands.internal:8080/sse"`
+- **VM:** `shared-cpu-1x`, 256 MB RAM
+- **Key env var:** `MCP_SERVER_URL="http://quipu-hands.internal:8080/sse"`
 
 The `.internal` address ensures the Brain communicates with the Tool Server entirely within Fly.io's secure, low-latency backend network.
 
