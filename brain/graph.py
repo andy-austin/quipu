@@ -17,6 +17,7 @@ RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "25"))
 class AgentState(TypedDict):
     url: str
     model: str | None
+    user_id: str | None
     db_status: str | None
     raw_content: str | None
     final_json: str | None
@@ -48,17 +49,26 @@ async def scrape_decision_node(state: AgentState) -> AgentState:
     return {"messages": [response]}
 
 
+# Tools that receive user_id for data isolation
+_USER_SCOPED_TOOLS = {"check_database_freshness", "save_metadata"}
+
+
 async def tool_execution_node(state: AgentState) -> AgentState:
     """Execute tool calls returned by the LLM."""
     from langchain_core.messages import ToolMessage
 
     last_message = state["messages"][-1]
     tool_map = {t.name: t for t in remote_mcp_tools}
+    user_id = state.get("user_id")
 
     new_messages = []
     for tool_call in last_message.tool_calls:
         tool_name = tool_call["name"]
-        log.info("tool_executing", tool=tool_name, args=tool_call["args"])
+        args = dict(tool_call["args"])
+        # Inject user_id into user-scoped tools for data isolation
+        if user_id and tool_name in _USER_SCOPED_TOOLS:
+            args["user_id"] = user_id
+        log.info("tool_executing", tool=tool_name, args=args)
         tool = tool_map.get(tool_name)
         if tool is None:
             result = f"Tool '{tool_name}' not found."
@@ -66,7 +76,7 @@ async def tool_execution_node(state: AgentState) -> AgentState:
         else:
             try:
                 # Sequential execution to avoid MCP session/browser closure issues
-                result = await tool.ainvoke(tool_call["args"])
+                result = await tool.ainvoke(args)
                 log.info("tool_success", tool=tool_name)
             except Exception as e:
                 result = f"Error executing tool {tool_name}: {e}"

@@ -105,10 +105,11 @@ def _format_sse_events(node_name: str, messages: list) -> list[dict]:
     return events
 
 
-async def stream_graph(url: str, model: str | None = None):
+async def stream_graph(url: str, model: str | None = None, user_id: str | None = None):
     initial_state = {
         "url": url,
         "model": model,
+        "user_id": user_id,
         "messages": [{"role": "user", "content": f"Process URL: {url}"}],
     }
     config = {"recursion_limit": RECURSION_LIMIT}
@@ -130,7 +131,8 @@ async def stream_graph(url: str, model: str | None = None):
 async def process_url(params: ScrapeRequest = Depends(), user_id: str = Depends(verify_user)):
     """Authenticated endpoint that streams LangGraph progression via SSE."""
     return StreamingResponse(
-        stream_graph(str(params.url), params.model), media_type="text/event-stream"
+        stream_graph(str(params.url), params.model, user_id=user_id),
+        media_type="text/event-stream",
     )
 
 
