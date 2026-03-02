@@ -13,6 +13,7 @@ from langgraph.errors import GraphRecursionError
 from brain import graph as graph_module
 from brain.dependencies import verify_user
 from brain.graph import RECURSION_LIMIT, agent_graph
+from brain.logging import log
 from brain.schemas import ScrapeRequest
 
 MCP_MAX_RETRIES = int(os.getenv("MCP_MAX_RETRIES", "5"))
@@ -29,19 +30,20 @@ async def _connect_mcp(mcp_url: str) -> None:
             client = MultiServerMCPClient({"mcp_tools": {"transport": "sse", "url": mcp_url}})
             graph_module.remote_mcp_tools = await client.get_tools()
             _mcp_connected = True
-            print(
-                f"MCP connected (attempt {attempt}), tools: "
-                f"{[t.name for t in graph_module.remote_mcp_tools]}"
+            log.info(
+                "mcp_connected",
+                attempt=attempt,
+                tools=[t.name for t in graph_module.remote_mcp_tools],
             )
             return
         except Exception as e:
             delay = MCP_RETRY_BASE_DELAY * (2 ** (attempt - 1))
-            print(f"MCP connection attempt {attempt}/{MCP_MAX_RETRIES} failed: {e}")
+            log.warning("mcp_connection_failed", attempt=attempt, max=MCP_MAX_RETRIES, error=str(e))
             if attempt < MCP_MAX_RETRIES:
-                print(f"Retrying in {delay:.1f}s...")
+                log.info("mcp_retrying", delay=delay)
                 await asyncio.sleep(delay)
     _mcp_connected = False
-    print("MCP connection failed after all retries. Starting without tools.")
+    log.error("mcp_connection_exhausted")
 
 
 @asynccontextmanager
