@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=2.3",
     "asyncpg>=0.30",
+    "beautifulsoup4>=4.12",
     "playwright>=1.50",
     "httpx>=0.28",
 ]

@@ -14,7 +14,7 @@ By decoupling these services, we can scale the heavy data-processing workers ind
 | Brain | FastAPI + LangGraph + langchain-mcp-adapters + Gemini / Groq | Fly.io |
 | Hands (Tool Server) | FastMCP | Fly.io |
 | Database & Auth | Supabase (PostgreSQL + JWT) | Supabase Cloud |
-| Web Scraping | Browserless.io (Playwright over WebSocket) | External |
+| Web Scraping | httpx + BeautifulSoup (with Playwright headless fallback) | Local |
 | Internal Communication | Server-Sent Events (SSE) over Fly.io private IPv6 network | Fly.io |
 
 ## 2. Architecture Flow
@@ -52,8 +52,7 @@ graph TD
         ToolWeb["Web Tools"]:::hands
     end
 
-    subgraph Browserless [External Services]
-        BaaS["Browserless.io"]:::external
+    subgraph External [External Services]
         TargetSite(("Target Website")):::external
     end
 
@@ -70,8 +69,7 @@ graph TD
     MCPServer -- "Executes Request" --> ToolWeb
 
     ToolDB -- "Read/Write Metadata" --> DB
-    ToolWeb -- "WebSocket Scrape" --> BaaS
-    BaaS -- "Reads DOM" --> TargetSite
+    ToolWeb -- "HTTP / Headless Browser" --> TargetSite
 ```
 
 ## 3. Monorepo Directory Structure
@@ -91,7 +89,7 @@ quipu/
 ├── hands/                   # The Hands (FastMCP)
 │   ├── tools/
 │   │   ├── db_tools.py      # Supabase Asyncpg logic
-│   │   └── web_tools.py     # Browserless Playwright logic
+│   │   └── web_tools.py     # Web scraping (httpx + Playwright fallback)
 │   ├── server.py            # FastMCP initialization
 │   ├── pyproject.toml       # Package dependencies
 │   ├── Dockerfile
@@ -120,7 +118,6 @@ The tool server knows nothing about AI, prompts, or agents. It purely exposes Py
 | Variable | Description |
 |---|---|
 | `SUPABASE_DB_URL` | PostgreSQL connection string |
-| `BROWSERLESS_API_KEY` | Browserless.io API key |
 
 ## 5. Service 2: Brain (`brain/`)
 

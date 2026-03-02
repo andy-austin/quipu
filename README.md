@@ -13,8 +13,8 @@ A decentralized AI agent system that separates **reasoning** from **execution**.
            │                                                       │
      Supabase JWT                                          ┌───────┴───────┐
      Authentication                                        │               │
-                                                      Supabase DB    Browserless.io
-                                                      (PostgreSQL)   (Playwright/WS)
+                                                      Supabase DB    Target Websites
+                                                      (PostgreSQL)   (httpx/Playwright)
 ```
 
 **Brain** (`brain/`) — The reasoning engine. On startup it connects to the Hands service via MCP, discovers available tools, and binds them to a LangGraph state machine. Agents use an LLM to decide which tools to invoke, then stream results back to clients via SSE.
@@ -28,7 +28,7 @@ A decentralized AI agent system that separates **reasoning** from **execution**.
 | Brain | FastAPI, LangGraph, langchain-mcp-adapters, Gemini |
 | Hands | FastMCP, asyncpg, Playwright |
 | Auth & DB | Supabase (PostgreSQL + JWT) |
-| Web Scraping | Browserless.io (Playwright over WebSocket) |
+| Web Scraping | httpx + BeautifulSoup (with Playwright headless fallback) |
 | Deployment | Fly.io (private IPv6 networking between services) |
 
 > The frontend (Next.js on Vercel) lives in a separate repository.
@@ -83,7 +83,7 @@ quipu/
 │   ├── server.py            # FastMCP initialization and tool registration
 │   ├── tools/
 │   │   ├── db_tools.py      # Database freshness checks, metadata persistence
-│   │   └── web_tools.py     # Browserless.io web scraping
+│   │   └── web_tools.py     # Web scraping (httpx + Playwright fallback)
 │   ├── Dockerfile
 │   └── fly.toml
 ├── docs/

@@ -46,7 +46,6 @@ Always deploy Hands first since the Brain depends on it.
 # Hands secrets
 fly secrets set \
   SUPABASE_DB_URL="postgresql://..." \
-  BROWSERLESS_API_KEY="..." \
   -a quipu-hands
 
 # Brain secrets

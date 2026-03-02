@@ -51,7 +51,7 @@ pytest -k test_name           # single test
 ## Environment Variables
 
 Brain: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `SUPABASE_JWT_SECRET`, `MCP_SERVER_URL`
-Hands: `SUPABASE_DB_URL`, `BROWSERLESS_API_KEY`
+Hands: `SUPABASE_DB_URL`
 
 ## Deployment
 

@@ -13,9 +13,8 @@ primary_region = "iad"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = "512mb"
 
 [env]
   PORT = "8080"
   # SUPABASE_DB_URL    = set via fly secrets
-  # BROWSERLESS_API_KEY = set via fly secrets
