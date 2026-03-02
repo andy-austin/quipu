@@ -10,6 +10,11 @@ from hands.tools.file_tools import list_files, parse_document, upload_file
 from hands.tools.key_tools import delete_api_key, list_api_keys, store_api_key
 from hands.tools.notification_tools import send_email, send_slack_message, send_webhook
 from hands.tools.run_tools import get_run, list_runs, save_run
+from hands.tools.user_server_tools import (
+    delete_user_server,
+    list_user_servers,
+    register_user_server,
+)
 from hands.tools.web_tools import scrape_website
 from hands.tools.webhook_tools import create_webhook, delete_webhook, get_webhook, list_webhooks
 
@@ -37,6 +42,9 @@ mcp.tool()(delete_webhook)
 mcp.tool()(upload_file)
 mcp.tool()(parse_document)
 mcp.tool()(list_files)
+mcp.tool()(register_user_server)
+mcp.tool()(list_user_servers)
+mcp.tool()(delete_user_server)
 
 
 def _shutdown_pool() -> None:

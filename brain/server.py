@@ -351,6 +351,57 @@ async def keys_list(user_id: str = Depends(verify_user)):
     return result
 
 
+@app.post("/api/servers")
+async def register_server(
+    name: str,
+    url: str,
+    auth_token: str | None = None,
+    user_id: str = Depends(verify_user),
+):
+    """Register a user's own MCP server endpoint."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("register_user_server")
+    if tool is None:
+        return {"error": "Server registration not available"}
+    result = await tool.ainvoke(
+        {
+            "user_id": user_id,
+            "name": name,
+            "url": url,
+            "auth_token": auth_token,
+        }
+    )
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
+@app.get("/api/servers")
+async def servers_list(user_id: str = Depends(verify_user)):
+    """List user's registered MCP servers."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("list_user_servers")
+    if tool is None:
+        return {"servers": []}
+    result = await tool.ainvoke({"user_id": user_id})
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
+@app.delete("/api/servers/{server_id}")
+async def server_delete(server_id: str, user_id: str = Depends(verify_user)):
+    """Delete a user's registered MCP server."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("delete_user_server")
+    if tool is None:
+        return {"error": "Server management not available"}
+    result = await tool.ainvoke({"user_id": user_id, "server_id": server_id})
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
 @app.get("/health")
 async def health():
     return {
