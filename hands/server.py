@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 
 from hands.tools.conversation_tools import load_conversation, save_conversation
 from hands.tools.db_tools import check_database_freshness, close_pool, save_metadata
+from hands.tools.run_tools import get_run, list_runs, save_run
 from hands.tools.web_tools import scrape_website
 
 port = int(os.getenv("PORT", "8080"))
@@ -16,6 +17,9 @@ mcp.tool()(scrape_website)
 mcp.tool()(save_metadata)
 mcp.tool()(load_conversation)
 mcp.tool()(save_conversation)
+mcp.tool()(list_runs)
+mcp.tool()(get_run)
+mcp.tool()(save_run)
 
 
 def _shutdown_pool() -> None:
