@@ -11,11 +11,12 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.errors import GraphRecursionError
 
 from brain import graph as graph_module
+from brain.chat_graph import chat_graph
 from brain.dependencies import verify_user
 from brain.graph import RECURSION_LIMIT, agent_graph
 from brain.logging import log
 from brain.rate_limit import check_rate_limit
-from brain.schemas import ScrapeRequest
+from brain.schemas import ChatRequest, ScrapeRequest
 
 MCP_MAX_RETRIES = int(os.getenv("MCP_MAX_RETRIES", "5"))
 MCP_RETRY_BASE_DELAY = float(os.getenv("MCP_RETRY_BASE_DELAY", "1.0"))
@@ -126,6 +127,45 @@ async def stream_graph(url: str, model: str | None = None, user_id: str | None =
         yield _sse_event({"type": "error", "message": msg})
     except Exception as e:
         yield _sse_event({"type": "error", "message": str(e)})
+
+
+async def stream_chat(
+    message: str,
+    model: str | None = None,
+    user_id: str | None = None,
+    system_prompt: str | None = None,
+):
+    initial_state = {
+        "model": model,
+        "user_id": user_id,
+        "system_prompt": system_prompt,
+        "messages": [{"role": "user", "content": message}],
+    }
+    config = {"recursion_limit": RECURSION_LIMIT}
+    try:
+        async for output in chat_graph.astream(initial_state, config=config):
+            for node_name, state_update in output.items():
+                messages = state_update.get("messages", [])
+                for event in _format_sse_events(node_name, messages):
+                    yield _sse_event(event)
+        yield _sse_event({"type": "done"})
+    except GraphRecursionError:
+        msg = "Agent exceeded maximum iterations. Task may be too complex."
+        yield _sse_event({"type": "error", "message": msg})
+    except Exception as e:
+        yield _sse_event({"type": "error", "message": str(e)})
+
+
+@app.get("/api/chat/stream")
+async def chat_stream(params: ChatRequest = Depends()):
+    """Unauthenticated chat endpoint — supports chat and scrape agents via SSE."""
+    if params.agent == "scrape":
+        url = str(params.url) if params.url else ""
+        return StreamingResponse(stream_graph(url, params.model), media_type="text/event-stream")
+    return StreamingResponse(
+        stream_chat(params.message, params.model, system_prompt=params.system_prompt),
+        media_type="text/event-stream",
+    )
 
 
 @app.get("/api/scraper/stream")
