@@ -4,6 +4,8 @@ import httpx
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
+from hands.logging import log
+
 _MIN_TEXT_LENGTH = 200
 
 
@@ -52,21 +54,21 @@ async def scrape_website(url: str) -> dict:
     Returns:
         A dict with ``title``, ``text``, and ``links`` extracted from the page.
     """
-    print(f"Scraping website: {url}")
+    log.info("scrape_start", url=url)
 
     try:
         result = await _scrape_with_httpx(url)
         if len(result["text"]) >= _MIN_TEXT_LENGTH:
-            print(f"Successfully scraped (httpx): {url}")
+            log.info("scrape_success", url=url, method="httpx")
             return result
-        print(f"Thin content from httpx ({len(result['text'])} chars), falling back to Playwright")
+        log.info("scrape_thin_content", url=url, chars=len(result["text"]))
     except Exception as e:
-        print(f"httpx failed ({e}), falling back to Playwright")
+        log.warning("scrape_httpx_failed", url=url, error=str(e))
 
     try:
         result = await asyncio.wait_for(_scrape_with_playwright(url), timeout=60)
-        print(f"Successfully scraped (playwright): {url}")
+        log.info("scrape_success", url=url, method="playwright")
         return result
     except TimeoutError:
-        print(f"Playwright timed out for {url}")
-        raise TimeoutError(f"Scraping timed out for {url} — site may require JavaScript rendering")
+        log.error("scrape_timeout", url=url)
+        raise TimeoutError(f"Scraping timed out for {url}")

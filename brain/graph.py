@@ -5,6 +5,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
+from brain.logging import log
 from brain.models import get_llm
 
 # Populated at startup from the MCP tool server
@@ -24,7 +25,7 @@ class AgentState(TypedDict):
 
 async def scrape_decision_node(state: AgentState) -> AgentState:
     """LLM decides whether to scrape based on tools and current state."""
-    print(f"Entering reasoning node for: {state.get('url')}")
+    log.info("reasoning_start", url=state.get("url"))
     llm = get_llm(state.get("model"))
     llm_with_tools = llm.bind_tools(remote_mcp_tools)
 
@@ -41,9 +42,9 @@ async def scrape_decision_node(state: AgentState) -> AgentState:
         [{"role": "system", "content": system_prompt}, *state["messages"]]
     )
     if hasattr(response, "tool_calls") and response.tool_calls:
-        print(f"LLM decided to call tools: {[tc['name'] for tc in response.tool_calls]}")
+        log.info("tool_calls_requested", tools=[tc["name"] for tc in response.tool_calls])
     else:
-        print("LLM finished reasoning without tool calls.")
+        log.info("reasoning_complete", tool_calls=False)
     return {"messages": [response]}
 
 
@@ -57,19 +58,19 @@ async def tool_execution_node(state: AgentState) -> AgentState:
     new_messages = []
     for tool_call in last_message.tool_calls:
         tool_name = tool_call["name"]
-        print(f"Executing tool: {tool_name} with args: {tool_call['args']}")
+        log.info("tool_executing", tool=tool_name, args=tool_call["args"])
         tool = tool_map.get(tool_name)
         if tool is None:
             result = f"Tool '{tool_name}' not found."
-            print(result)
+            log.warning("tool_not_found", tool=tool_name)
         else:
             try:
                 # Sequential execution to avoid MCP session/browser closure issues
                 result = await tool.ainvoke(tool_call["args"])
-                print(f"Tool {tool_name} returned successfully.")
+                log.info("tool_success", tool=tool_name)
             except Exception as e:
                 result = f"Error executing tool {tool_name}: {e}"
-                print(result)
+                log.error("tool_error", tool=tool_name, error=str(e))
 
         new_messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
     return {"messages": new_messages}

@@ -4,6 +4,8 @@ from datetime import UTC, datetime, timedelta
 
 import asyncpg
 
+from hands.logging import log
+
 DB_URL = os.environ.get("SUPABASE_DB_URL", "")
 FRESHNESS_HOURS = int(os.environ.get("FRESHNESS_HOURS", "24"))
 DB_POOL_MIN = int(os.environ.get("DB_POOL_MIN", "2"))
@@ -35,7 +37,7 @@ async def check_database_freshness(url: str) -> dict:
     Returns:
         A dict with keys ``fresh`` (bool) and ``data`` (the cached record or None).
     """
-    print(f"Checking freshness for: {url}")
+    log.info("checking_freshness", url=url)
     pool = await get_pool()
     async with pool.acquire() as conn:
         cutoff = datetime.now(UTC) - timedelta(hours=FRESHNESS_HOURS)
@@ -45,9 +47,9 @@ async def check_database_freshness(url: str) -> dict:
             cutoff,
         )
         if row:
-            print(f"Found fresh data for: {url}")
+            log.info("fresh_data_found", url=url)
             return {"fresh": True, "data": dict(row)}
-        print(f"No fresh data found for: {url}")
+        log.info("no_fresh_data", url=url)
         return {"fresh": False, "data": None}
 
 
@@ -61,7 +63,7 @@ async def save_metadata(url: str, metadata: dict) -> dict:
     Returns:
         The saved record id and timestamp.
     """
-    print(f"Saving metadata for: {url}")
+    log.info("saving_metadata", url=url)
     # Defensive truncation for LLM safety
     if "text" in metadata and isinstance(metadata["text"], str):
         metadata["text"] = metadata["text"][:1000]
@@ -79,5 +81,5 @@ async def save_metadata(url: str, metadata: dict) -> dict:
             url,
             json.dumps(metadata),
         )
-        print(f"Successfully saved metadata for: {url}")
+        log.info("metadata_saved", url=url)
         return {"id": str(row["id"]), "scraped_at": row["scraped_at"].isoformat()}

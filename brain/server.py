@@ -12,6 +12,7 @@ from langgraph.errors import GraphRecursionError
 from brain import graph as graph_module
 from brain.dependencies import verify_user
 from brain.graph import RECURSION_LIMIT, agent_graph
+from brain.logging import log
 from brain.schemas import ScrapeRequest
 
 
@@ -21,7 +22,7 @@ async def lifespan(app: FastAPI):
 
     client = MultiServerMCPClient({"mcp_tools": {"transport": "sse", "url": mcp_url}})
     graph_module.remote_mcp_tools = await client.get_tools()
-    print(f"Loaded remote tools: {[t.name for t in graph_module.remote_mcp_tools]}")
+    log.info("mcp_tools_loaded", tools=[t.name for t in graph_module.remote_mcp_tools])
 
     yield
 
