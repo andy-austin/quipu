@@ -40,8 +40,9 @@ def test_register_agent():
         system_prompt="You are a test.",
     )
     register_agent(custom)
-    assert get_agent("test-agent") is not None
-    assert get_agent("test-agent").name == "test-agent"
+    result = get_agent("test-agent")
+    assert result is not None
+    assert result.name == "test-agent"
 
 
 def test_list_agents_includes_builtins():
