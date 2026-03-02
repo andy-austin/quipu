@@ -14,6 +14,7 @@ from brain import graph as graph_module
 from brain.dependencies import verify_user
 from brain.graph import RECURSION_LIMIT, agent_graph
 from brain.logging import log
+from brain.rate_limit import check_rate_limit
 from brain.schemas import ScrapeRequest
 
 MCP_MAX_RETRIES = int(os.getenv("MCP_MAX_RETRIES", "5"))
@@ -129,6 +130,7 @@ async def stream_graph(url: str, model: str | None = None):
 @app.get("/api/scraper/stream")
 async def process_url(params: ScrapeRequest = Depends(), user_id: str = Depends(verify_user)):
     """Authenticated endpoint that streams LangGraph progression via SSE."""
+    check_rate_limit(user_id)
     return StreamingResponse(
         stream_graph(str(params.url), params.model), media_type="text/event-stream"
     )
