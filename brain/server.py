@@ -334,6 +334,51 @@ async def runs_get(run_id: str, user_id: str = Depends(verify_user)):
     return result
 
 
+@app.post("/api/keys")
+async def store_key(provider: str, api_key: str, user_id: str = Depends(verify_user)):
+    """Store or update a user's API key for a provider."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("store_api_key")
+    if tool is None:
+        return {"error": "Key storage not available"}
+    result = await tool.ainvoke(
+        {
+            "user_id": user_id,
+            "provider": provider,
+            "api_key": api_key,
+        }
+    )
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
+@app.delete("/api/keys/{provider}")
+async def delete_key(provider: str, user_id: str = Depends(verify_user)):
+    """Delete a user's API key for a provider."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("delete_api_key")
+    if tool is None:
+        return {"error": "Key storage not available"}
+    result = await tool.ainvoke({"user_id": user_id, "provider": provider})
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
+@app.get("/api/keys")
+async def keys_list(user_id: str = Depends(verify_user)):
+    """List all providers for which the user has stored keys."""
+    check_rate_limit(user_id)
+    tool = _get_mcp_tool("list_api_keys")
+    if tool is None:
+        return {"providers": []}
+    result = await tool.ainvoke({"user_id": user_id})
+    if isinstance(result, str):
+        result = json.loads(result)
+    return result
+
+
 @app.get("/health")
 async def health():
     return {
