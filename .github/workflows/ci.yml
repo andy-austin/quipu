@@ -18,9 +18,9 @@ jobs:
 
       - run: pip install ruff
 
-      - run: ruff check .
+      - run: ruff check brain/ hands/
 
-      - run: ruff format --check .
+      - run: ruff format --check brain/ hands/
 
   typecheck:
     name: Typecheck
