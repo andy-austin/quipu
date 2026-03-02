@@ -1,8 +1,11 @@
 """Tests for BYOK (Bring Your Own Key) — brain model selection with user keys."""
 
 import pytest
+from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
+from langchain_mistralai import ChatMistralAI
+from langchain_openai import ChatOpenAI
 
 from brain.models import DEFAULT_MODEL, SUPPORTED_MODELS, get_llm
 
@@ -21,13 +24,39 @@ class TestGetLlm:
         llm = get_llm("llama-3.3-70b", user_api_keys={"groq": "user-groq-key"})
         assert isinstance(llm, ChatGroq)
 
+    def test_openai_with_user_key(self):
+        llm = get_llm("gpt-4o", user_api_keys={"openai": "sk-test-key"})
+        assert isinstance(llm, ChatOpenAI)
+
+    def test_openai_mini_with_user_key(self):
+        llm = get_llm("gpt-4o-mini", user_api_keys={"openai": "sk-test-key"})
+        assert isinstance(llm, ChatOpenAI)
+
+    def test_anthropic_with_user_key(self):
+        llm = get_llm("claude-sonnet", user_api_keys={"anthropic": "sk-ant-test"})
+        assert isinstance(llm, ChatAnthropic)
+
+    def test_anthropic_haiku_with_user_key(self):
+        llm = get_llm("claude-haiku", user_api_keys={"anthropic": "sk-ant-test"})
+        assert isinstance(llm, ChatAnthropic)
+
+    def test_mistral_with_user_key(self):
+        llm = get_llm("mistral-large", user_api_keys={"mistral": "test-mistral-key"})
+        assert isinstance(llm, ChatMistralAI)
+
+    def test_mistral_small_with_user_key(self):
+        llm = get_llm("mistral-small", user_api_keys={"mistral": "test-mistral-key"})
+        assert isinstance(llm, ChatMistralAI)
+
     def test_unsupported_model_raises(self):
         with pytest.raises(ValueError, match="Unsupported model"):
             get_llm("nonexistent-model")
 
-    def test_supported_models_populated(self):
-        assert len(SUPPORTED_MODELS) >= 2
+    def test_supported_models_has_all_providers(self):
+        assert len(SUPPORTED_MODELS) == 8
         assert DEFAULT_MODEL in SUPPORTED_MODELS
+        providers = {v[0] for v in SUPPORTED_MODELS.values()}
+        assert providers == {"google", "groq", "openai", "anthropic", "mistral"}
 
 
 class TestBrainKeyEndpoints:
