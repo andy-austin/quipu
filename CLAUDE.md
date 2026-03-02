@@ -25,6 +25,8 @@ just fix                      # auto-fix lint and format
 just typecheck                # pyright
 just test                     # all tests
 just health                   # curl the health endpoint
+just deploy-brain             # deploy Brain to Fly.io
+just deploy-hands             # deploy Hands to Fly.io
 pytest brain/                 # single package
 pytest -k test_name           # single test
 ```
@@ -48,7 +50,7 @@ pytest -k test_name           # single test
 
 ## Environment Variables
 
-Brain: `GOOGLE_API_KEY`, `SUPABASE_JWT_SECRET`, `MCP_SERVER_URL`
+Brain: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `SUPABASE_JWT_SECRET`, `MCP_SERVER_URL`
 Hands: `SUPABASE_DB_URL`, `BROWSERLESS_API_KEY`
 
 ## Deployment

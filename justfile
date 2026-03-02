@@ -34,6 +34,14 @@ test:
 health:
     curl -s http://localhost:8000/health | python -m json.tool
 
+# Deploy Brain to Fly.io
+deploy-brain:
+    fly deploy -c brain/fly.toml --dockerfile brain/Dockerfile
+
+# Deploy Hands to Fly.io
+deploy-hands:
+    fly deploy -c hands/fly.toml --dockerfile hands/Dockerfile
+
 # Install dependencies
 sync:
     uv sync
