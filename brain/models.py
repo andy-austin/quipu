@@ -1,9 +1,4 @@
-from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_groq import ChatGroq
-from langchain_mistralai import ChatMistralAI
-from langchain_openai import ChatOpenAI
 
 SUPPORTED_MODELS: dict[str, tuple[str, str]] = {
     # Google
@@ -23,13 +18,23 @@ SUPPORTED_MODELS: dict[str, tuple[str, str]] = {
 
 DEFAULT_MODEL = "gemini-2.0-flash"
 
-_PROVIDER_FACTORIES: dict[str, tuple[type, str]] = {
-    "google": (ChatGoogleGenerativeAI, "google_api_key"),
-    "groq": (ChatGroq, "api_key"),
-    "openai": (ChatOpenAI, "api_key"),
-    "anthropic": (ChatAnthropic, "api_key"),
-    "mistral": (ChatMistralAI, "api_key"),
+# Lazy-loaded provider factories: (module_path, class_name, api_key_param)
+_PROVIDER_FACTORIES: dict[str, tuple[str, str, str]] = {
+    "google": ("langchain_google_genai", "ChatGoogleGenerativeAI", "google_api_key"),
+    "groq": ("langchain_groq", "ChatGroq", "api_key"),
+    "openai": ("langchain_openai", "ChatOpenAI", "api_key"),
+    "anthropic": ("langchain_anthropic", "ChatAnthropic", "api_key"),
+    "mistral": ("langchain_mistralai", "ChatMistralAI", "api_key"),
 }
+
+
+def _get_provider_class(provider: str) -> type:
+    """Lazily import and return the LangChain chat class for a provider."""
+    import importlib
+
+    module_path, class_name, _ = _PROVIDER_FACTORIES[provider]
+    module = importlib.import_module(module_path)
+    return getattr(module, class_name)
 
 
 def get_llm(
@@ -52,7 +57,8 @@ def get_llm(
     if provider not in _PROVIDER_FACTORIES:
         raise ValueError(f"Unknown provider '{provider}'")
 
-    cls, key_param = _PROVIDER_FACTORIES[provider]
+    cls = _get_provider_class(provider)
+    _, _, key_param = _PROVIDER_FACTORIES[provider]
     api_key = user_keys.get(provider)
     if api_key:
         return cls(model=model_name, **{key_param: api_key})  # type: ignore[call-arg]
