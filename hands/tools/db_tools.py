@@ -42,20 +42,13 @@ async def check_database_freshness(url: str, user_id: str | None = None) -> dict
     pool = await get_pool()
     async with pool.acquire() as conn:
         cutoff = datetime.now(UTC) - timedelta(hours=FRESHNESS_HOURS)
-        if user_id:
-            row = await conn.fetchrow(
-                "SELECT * FROM scraped_metadata"
-                " WHERE url = $1 AND scraped_at > $2 AND user_id = $3",
-                url,
-                cutoff,
-                user_id,
-            )
-        else:
-            row = await conn.fetchrow(
-                "SELECT * FROM scraped_metadata WHERE url = $1 AND scraped_at > $2",
-                url,
-                cutoff,
-            )
+        row = await conn.fetchrow(
+            "SELECT * FROM scraped_metadata"
+            " WHERE url = $1 AND scraped_at > $2 AND user_id = $3",
+            url,
+            cutoff,
+            user_id or "",
+        )
         if row:
             log.info("fresh_data_found", url=url)
             return {"fresh": True, "data": dict(row)}
@@ -91,7 +84,7 @@ async def save_metadata(url: str, metadata: dict, user_id: str | None = None) ->
             """,
             url,
             json.dumps(metadata),
-            user_id,
+            user_id or "",
         )
         log.info("metadata_saved", url=url)
         return {"id": str(row["id"]), "scraped_at": row["scraped_at"].isoformat()}
