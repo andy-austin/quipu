@@ -40,18 +40,24 @@ pytest -k test_name           # single test
 
 ## Architecture Details
 
-**Brain startup lifecycle** (`brain/server.py`): The FastAPI lifespan connects to the Hands MCP server once, fetches all available tools, and stores them in `graph_module.remote_mcp_tools`. The LangGraph graph (`brain/graph.py`) binds these tools to the LLM at inference time.
+**Brain startup lifecycle** (`brain/server.py`): The FastAPI lifespan uses `MCPRegistry` (`brain/mcp_registry.py`) to connect to one or more Hands MCP servers, fetches all available tools, and stores them in `graph_module.remote_mcp_tools`. The LangGraph graph (`brain/graph.py`) binds these tools to the LLM at inference time.
 
 **LangGraph flow** (`brain/graph.py`): `reasoning` node → conditional edge → `execute_tools` node → loops back to `reasoning`. The `should_continue` function checks for tool calls to decide whether to execute tools or end.
 
+**Multi-model support** (`brain/models.py`): Factory-based provider system supporting Google Gemini, Groq, OpenAI, Anthropic, and Mistral. Supports BYOK (Bring Your Own Key) via encrypted user API keys.
+
+**Workflow engine** (`brain/workflows/`): DAG-based workflow execution with conditional branching. `WorkflowDefinition` schema defines steps, conditions, and routing. `execute_workflow()` runs the DAG with `{input}` template substitution between steps.
+
+**Webhook triggers** (`brain/webhooks.py`): HMAC-SHA256 authenticated webhook endpoints for triggering agent runs from external services.
+
 **Tool registration** (`hands/server.py`): Functions in `hands/tools/` are registered via `mcp.tool()()` decorator pattern on the FastMCP instance.
 
-**Auth** (`brain/dependencies.py`): All Brain endpoints require a Supabase JWT. The `verify_user` dependency decodes the token and extracts `user_id`.
+**Auth** (`brain/dependencies.py`): All Brain endpoints require a Supabase JWT. The `verify_user` dependency decodes the token and extracts `user_id`. Hands supports optional token auth (`hands/auth.py`) for self-hosted instances.
 
 ## Environment Variables
 
-Brain: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `SUPABASE_JWT_SECRET`, `MCP_SERVER_URL`
-Hands: `SUPABASE_DB_URL`
+Brain: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `SUPABASE_JWT_SECRET`, `MCP_SERVER_URL` (single server) or `MCP_SERVERS` (JSON array for multi-Hands)
+Hands: `SUPABASE_DB_URL`, `KEY_ENCRYPTION_KEY` (Fernet key for BYOK), `HANDS_AUTH_TOKEN` (optional, for self-hosted auth)
 
 ## Deployment
 

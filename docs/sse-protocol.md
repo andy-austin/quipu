@@ -11,7 +11,8 @@ The Brain streams structured JSON events over Server-Sent Events (SSE). Each lin
 | `tool_result` | Tool execution completed | `message`, `tool`, `status` |
 | `answer` | Final LLM response (no more tool calls) | `message` |
 | `error` | An error occurred during processing | `message` |
-| `done` | Stream is complete | — |
+| `extracted` | Structured data extracted (extraction pipeline) | `data` |
+| `done` | Stream is complete | `conversation_id` (optional, for chat) |
 
 ### Field Reference
 

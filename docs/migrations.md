@@ -29,3 +29,9 @@ This executes all migration files via `psql`. Ensure `SUPABASE_DB_URL` is set in
 | File | Description |
 |---|---|
 | `001_scraped_metadata.sql` | Creates `scraped_metadata` table with URL, JSONB metadata, and timestamp |
+| `001_conversations.sql` | Creates `conversations` table for chat history persistence |
+| `002_runs.sql` | Creates `agent_runs` table for storing agent execution history |
+| `003_user_api_keys.sql` | Creates `user_api_keys` table for BYOK encrypted key storage |
+| `004_webhooks.sql` | Creates `webhooks` table for webhook registration and secrets |
+| `005_files.sql` | Creates `user_files` table for uploaded file metadata and content |
+| `006_user_mcp_servers.sql` | Creates `user_mcp_servers` table for self-hosted Hands registration |
