@@ -199,7 +199,7 @@ async def agents_list():
     return list_agents()
 
 
-@app.get("/api/chat/stream")
+@app.get("/api/chat/stream", include_in_schema=False)
 async def chat_stream(params: ChatRequest = Depends()):
     """Unauthenticated chat endpoint — supports chat and scrape agents via SSE."""
     if params.agent == "scrape":
@@ -251,7 +251,7 @@ async def stream_extraction(url: str, schema_name: str, model: str | None = None
         yield _sse_event({"type": "error", "message": str(e)})
 
 
-@app.get("/api/extract/stream")
+@app.get("/api/extract/stream", include_in_schema=False)
 async def extract_stream(params: ExtractionRequest = Depends()):
     """Extract structured data from a URL via SSE."""
     return StreamingResponse(
@@ -270,7 +270,7 @@ async def process_url(params: ScrapeRequest = Depends(), user_id: str = Depends(
     )
 
 
-@app.get("/api/test/stream")
+@app.get("/api/test/stream", include_in_schema=False)
 async def test_stream(params: ScrapeRequest = Depends()):
     """Unauthenticated test endpoint — exercises the full Brain→Hands pipeline."""
     return StreamingResponse(
