@@ -150,7 +150,7 @@ class TestExecuteWorkflow:
         )
         result = await execute_workflow(wf, "input")
         assert result.status == "error"
-        assert "Invalid workflow" in result.error
+        assert result.error is not None and "Invalid workflow" in result.error
 
     async def test_workflow_max_steps(self):
         wf = WorkflowDefinition(
