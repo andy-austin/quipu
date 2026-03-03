@@ -19,6 +19,8 @@ from brain.mcp_registry import registry as mcp_registry
 from brain.rate_limit import check_rate_limit
 from brain.schemas import ChatRequest, ExtractionRequest, ScrapeRequest
 from brain.webhooks import router as webhooks_router
+from brain.workflows.engine import execute_workflow
+from brain.workflows.schema import WorkflowDefinition
 
 
 @asynccontextmanager
@@ -400,6 +402,26 @@ async def server_delete(server_id: str, user_id: str = Depends(verify_user)):
     if isinstance(result, str):
         result = json.loads(result)
     return result
+
+
+@app.post("/api/workflows/run")
+async def run_workflow(
+    workflow: WorkflowDefinition,
+    message: str = "",
+    model: str | None = None,
+    user_id: str = Depends(verify_user),
+):
+    """Execute a workflow definition and return results."""
+    check_rate_limit(user_id)
+    result = await execute_workflow(workflow, message, model=model, user_id=user_id)
+    return result.to_dict()
+
+
+@app.post("/api/workflows/validate")
+async def validate_workflow(workflow: WorkflowDefinition):
+    """Validate a workflow definition without executing it."""
+    errors = workflow.validate_dag()
+    return {"valid": len(errors) == 0, "errors": errors}
 
 
 @app.get("/health")
