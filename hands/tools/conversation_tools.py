@@ -33,7 +33,7 @@ async def load_conversation(conversation_id: str, user_id: str) -> dict:
         return {"conversation_id": conversation_id, "messages": []}
 
 
-async def save_conversation(conversation_id: str, user_id: str, messages: list) -> dict:
+async def save_conversation(conversation_id: str, user_id: str, messages: list[dict]) -> dict:
     """Save message history for a conversation (upsert).
 
     Args:
